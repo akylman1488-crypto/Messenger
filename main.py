@@ -1,5 +1,16 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import List
+from fastapi.responses import HTMLResponse # Добавь это
+
+app = FastAPI()
+
+# Добавь этот блок кода
+@app.get("/")
+async def get():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+# Весь остальной код ConnectionManager и @app.websocket оставляй как был
 
 app = FastAPI()
 
