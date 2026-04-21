@@ -1,43 +1,28 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from typing import List
-from fastapi.responses import HTMLResponse # Добавь это
+import streamlit as st
+import datetime
 
-app = FastAPI()
+st.set_page_config(page_title="Akylman Messenger", layout="centered")
 
-# Добавь этот блок кода
-@app.get("/")
-async def get():
-    with open("index.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
+# Инициализация истории сообщений в памяти сервера
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Весь остальной код ConnectionManager и @app.websocket оставляй как был
+st.title("💬 Наш Мессенджер")
 
-app = FastAPI()
+# Отображение сообщений
+chat_container = st.container(height=400)
+with chat_container:
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(f"**{msg['user']}** [{msg['time']}]: {msg['text']}")
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
-
-manager = ConnectionManager()
-
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(f"User {client_id}: {data}")
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.broadcast(f"User {client_id} left the chat")
+# Поле ввода
+if prompt := st.chat_input("Введите сообщение..."):
+    # Добавляем сообщение в историю
+    now = datetime.datetime.now().strftime("%H:%M")
+    new_msg = {"role": "user", "user": "User_1", "time": now, "text": prompt}
+    
+    st.session_state.messages.append(new_msg)
+    
+    # Перезагружаем интерфейс, чтобы сообщение появилось
+    st.rerun()
