@@ -11,7 +11,7 @@ def get_global_messages():
 # Получаем ссылку на этот общий список
 all_messages = get_global_messages()
 
-st.title("💬 Наш Мессенджер")
+st.title("💬 Akylman")
 
 # Отображение сообщений из общего списка
 chat_container = st.container(height=400)
