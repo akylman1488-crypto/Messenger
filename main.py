@@ -5,10 +5,14 @@ from streamlit_cookies_manager import EncryptedCookieManager
 import streamlit as st
 
 def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_status=True)
+    try:
+        with open(file_name, "r", encoding="utf-8") as f:
+            # Исправленный параметр: unsafe_allow_html=True
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error(f"Файл {file_name} не найден. Проверь, что он создан в Codespaces.")
 
-# Вызов функции (укажи путь к твоему файлу)
+# Вызывай эту функцию в самом начале
 local_css("style.css")
 
 # Настройка куки (для хранения сессии)
