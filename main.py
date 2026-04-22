@@ -1,50 +1,108 @@
 import streamlit as st
+import sqlite3
 import datetime
+from streamlit_cookies_manager import EncryptedCookieManager
 
-st.set_page_config(page_title="Akylman Messenger", layout="wide")
+# Настройка куки (для хранения сессии)
+cookies = EncryptedCookieManager(password="secret_password_123")
+if not cookies.ready():
+    st.stop()
 
-@st.cache_resource
-def get_db():
-    return []
+# --- РАБОТА С БАЗОЙ ДАННЫХ ---
+def init_db():
+    conn = sqlite3.connect('messenger.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS messages 
+                 (sender TEXT, receiver TEXT, text TEXT, time TEXT)''')
+    conn.commit()
+    conn.close()
 
-db = get_db()
+def get_all_users():
+    conn = sqlite3.connect('messenger.db')
+    users = [row[0] for row in conn.execute('SELECT username FROM users').fetchall()]
+    conn.close()
+    return users
 
-# Настройки в сайдбаре
-st.sidebar.title("Аккаунт")
-my_name = st.sidebar.text_input("Ваше имя:", value="User1")
-all_users = ["Admin", "User1", "User2", "Cousin", "Friend"]
-chat_with = st.sidebar.selectbox("Собеседник:", [u for u in all_users if u != my_name])
+init_db()
 
-st.title(f"Чат: {my_name} ↔️ {chat_with}")
+# --- ЛОГИКА ВХОДА ---
+if "logged_in_user" not in st.session_state:
+    st.session_state.logged_in_user = cookies.get("user")
 
-# Фрагмент, который обновляется сам каждые 2 секунды
+# Окно регистрации/входа
+if not st.session_state.logged_in_user:
+    st.title("Добро пожаловать в Akylman Messenger")
+    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
+    
+    with tab2:
+        reg_user = st.text_input("Придумайте логин")
+        reg_pass = st.text_input("Придумайте пароль", type="password")
+        if st.button("Зарегистрироваться"):
+            try:
+                conn = sqlite3.connect('messenger.db')
+                conn.execute('INSERT INTO users VALUES (?, ?)', (reg_user, reg_pass))
+                conn.commit()
+                st.success("Аккаунт создан! Теперь войдите.")
+            except:
+                st.error("Это имя уже занято.")
+            finally:
+                conn.close()
+
+    with tab1:
+        login_user = st.text_input("Логин")
+        login_pass = st.text_input("Пароль", type="password")
+        if st.button("Войти"):
+            conn = sqlite3.connect('messenger.db')
+            user = conn.execute('SELECT * FROM users WHERE username=? AND password=?', 
+                                (login_user, login_pass)).fetchone()
+            if user:
+                st.session_state.logged_in_user = login_user
+                cookies["user"] = login_user
+                cookies.save()
+                st.rerun()
+            else:
+                st.error("Неверный логин или пароль")
+            conn.close()
+    st.stop()
+
+# --- ИНТЕРФЕЙС МЕССЕНДЖЕРА ---
+my_name = st.session_state.logged_in_user
+
+# Выход из аккаунта
+if st.sidebar.button("Выйти"):
+    cookies.update({"user": ""})
+    cookies.save()
+    st.session_state.logged_in_user = None
+    st.rerun()
+
+# Список всех людей
+all_users = get_all_users()
+chat_with = st.sidebar.selectbox("Выберите чат:", [u for u in all_users if u != my_name])
+
+st.title(f"Вы: {my_name} | Чат с: {chat_with}")
+
 @st.fragment(run_every="2s")
 def show_messages():
-    # Фильтруем сообщения внутри фрагмента, чтобы всегда видеть свежие
-    current_chat = [
-        m for m in db 
-        if (m["from"] == my_name and m["to"] == chat_with) or 
-           (m["from"] == chat_with and m["to"] == my_name)
-    ]
+    conn = sqlite3.connect('messenger.db')
+    messages = conn.execute('''SELECT sender, text, time FROM messages 
+                               WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)''',
+                            (my_name, chat_with, chat_with, my_name)).fetchall()
+    conn.close()
     
-    with st.container(height=450):
-        for msg in current_chat:
-            role = "user" if msg["from"] == my_name else "assistant"
+    with st.container(height=400):
+        for msg in messages:
+            role = "user" if msg[0] == my_name else "assistant"
             with st.chat_message(role):
-                st.write(f"**{msg['from']}**: {msg['text']}")
-                st.caption(msg['time'])
+                st.write(f"**{msg[0]}**: {msg[1]}")
+                st.caption(msg[2])
 
-# Вызываем фрагмент
 show_messages()
 
-# Поле ввода (вне фрагмента, чтобы не сбрасывалось)
-if prompt := st.chat_input("Напишите что-нибудь..."):
+if prompt := st.chat_input("Сообщение..."):
     now = datetime.datetime.now().strftime("%H:%M")
-    db.append({
-        "from": my_name,
-        "to": chat_with,
-        "text": prompt,
-        "time": now
-    })
-    # Принудительно обновляем всё после отправки, чтобы сообщение появилось сразу
+    conn = sqlite3.connect('messenger.db')
+    conn.execute('INSERT INTO messages VALUES (?, ?, ?, ?)', (my_name, chat_with, prompt, now))
+    conn.commit()
+    conn.close()
     st.rerun()
