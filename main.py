@@ -2,6 +2,14 @@ import streamlit as st
 import sqlite3
 import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
+import streamlit as st
+
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_status=True)
+
+# Вызов функции (укажи путь к твоему файлу)
+local_css("style.css")
 
 # Настройка куки (для хранения сессии)
 cookies = EncryptedCookieManager(password="secret_password_123")
