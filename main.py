@@ -3,6 +3,15 @@ import sqlite3
 import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
+def clear_chat(user1, user2):
+    conn = sqlite3.connect('messenger.db')
+    # Удаляем сообщения только между этими двумя пользователями
+    conn.execute('''DELETE FROM messages 
+                    WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)''', 
+                 (user1, user2, user2, user1))
+    conn.commit()
+    conn.close()
+
 # Настройка куки (для хранения сессии)
 cookies = EncryptedCookieManager(password="secret_password_123")
 if not cookies.ready():
@@ -25,6 +34,11 @@ def get_all_users():
     return users
 
 init_db()
+
+st.sidebar.markdown("---") # Разделительная линия
+if st.sidebar.button("🗑️ Очистить чат"):
+    clear_chat(my_name, chat_with)
+    st.rerun() # Перезагружаем, чтобы сообщения сразу исчезли
 
 # --- ЛОГИКА ВХОДА ---
 if "logged_in_user" not in st.session_state:
