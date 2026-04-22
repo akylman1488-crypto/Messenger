@@ -3,15 +3,6 @@ import sqlite3
 import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
-def clear_chat(user1, user2):
-    conn = sqlite3.connect('messenger.db')
-    # Удаляем сообщения только между этими двумя пользователями
-    conn.execute('''DELETE FROM messages 
-                    WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)''', 
-                 (user1, user2, user2, user1))
-    conn.commit()
-    conn.close()
-
 # Настройка куки (для хранения сессии)
 cookies = EncryptedCookieManager(password="secret_password_123")
 if not cookies.ready():
@@ -34,11 +25,6 @@ def get_all_users():
     return users
 
 init_db()
-
-st.sidebar.markdown("---") # Разделительная линия
-if st.sidebar.button("🗑️ Очистить чат"):
-    clear_chat(my_name, chat_with)
-    st.rerun() # Перезагружаем, чтобы сообщения сразу исчезли
 
 # --- ЛОГИКА ВХОДА ---
 if "logged_in_user" not in st.session_state:
@@ -119,4 +105,21 @@ if prompt := st.chat_input("Сообщение..."):
     conn.execute('INSERT INTO messages VALUES (?, ?, ?, ?)', (my_name, chat_with, prompt, now))
     conn.commit()
     conn.close()
+    st.rerun()
+
+# В сайдбаре:
+st.sidebar.markdown("---")
+st.sidebar.subheader("Управление")
+
+if st.sidebar.button("🗑️ Очистить текущий чат", use_container_width=True):
+    with sqlite3.connect('messenger.db') as conn:
+        cursor = conn.cursor()
+        # Выполняем удаление
+        cursor.execute('''DELETE FROM messages 
+                          WHERE (sender=? AND receiver=?) OR (sender=? AND receiver=?)''', 
+                       (my_name, chat_with, chat_with, my_name))
+        conn.commit()
+    
+    # Это критически важно: уведомляем Streamlit, что данные изменились
+    st.toast(f"Чат с {chat_with} очищен")
     st.rerun()
