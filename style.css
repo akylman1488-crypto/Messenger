@@ -1,0 +1,30 @@
+/* Общий фон страницы */
+.stApp {
+    background-color: #f0f2f5;
+}
+
+/* Стиль для боковой панели */
+[data-testid="stSidebar"] {
+    background-color: #ffffff;
+    border-right: 1px solid #e0e0e0;
+}
+
+/* Скругление блоков сообщений */
+[data-testid="stChatMessage"] {
+    border-radius: 15px;
+    padding: 10px;
+    margin-bottom: 5px;
+}
+
+/* Специфический стиль для заголовка */
+h1 {
+    color: #1c1e21;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+}
+
+/* Кастомизация поля ввода */
+[data-testid="stChatInput"] {
+    border-top: 1px solid #ddd;
+    background-color: white;
+}
