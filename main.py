@@ -1,34 +1,51 @@
 import streamlit as st
 import datetime
 
-st.set_page_config(page_title="Akylman Messenger", layout="centered")
+st.set_page_config(page_title="Akylman Private Messenger", layout="wide")
 
-# Функция для создания общего хранилища для ВСЕХ пользователей
+# Общее хранилище для ВСЕХ сообщений (в будущем заменим на БД)
 @st.cache_resource
-def get_global_messages():
-    return []
+def get_db():
+    return [] # Список словарей: {"from": ..., "to": ..., "text": ..., "time": ...}
 
-# Получаем ссылку на этот общий список
-all_messages = get_global_messages()
+db = get_db()
 
-st.title("💬 Akylman")
+# 1. Авторизация (кто ты?)
+my_name = st.sidebar.text_input("Твое имя (Логин):", value="User1")
 
-# Отображение сообщений из общего списка
+# 2. Список доступных чатов (350 человек)
+# Для примера создадим список из нескольких имен
+all_users = ["User1", "User2", "Admin", "Cousin", "Friend_7th_Grade"]
+chat_with = st.sidebar.selectbox("С кем переписываться?", [u for u in all_users if u != my_name])
+
+st.title(f"Чат: {my_name} ↔️ {chat_with}")
+
+# 3. Фильтрация сообщений для конкретного диалога
+current_chat_messages = [
+    msg for msg in db 
+    if (msg["from"] == my_name and msg["to"] == chat_with) or 
+       (msg["from"] == chat_with and msg["to"] == my_name)
+]
+
+# 4. Отображение чата
 chat_container = st.container(height=400)
 with chat_container:
-    for msg in all_messages:
-        with st.chat_message(msg["role"]):
-            st.write(f"**{msg['user']}** [{msg['time']}]: {msg['text']}")
+    for msg in current_chat_messages:
+        align = "user" if msg["from"] == my_name else "assistant"
+        with st.chat_message(align):
+            st.write(f"**{msg['from']}**: {msg['text']} *({msg['time']})*")
 
-# Поле ввода
-if prompt := st.chat_input("Введите сообщение..."):
+# 5. Отправка сообщения
+if prompt := st.chat_input(f"Написать {chat_with}..."):
     now = datetime.datetime.now().strftime("%H:%M")
-    # Добавляем в ОБЩИЙ список
-    new_msg = {"role": "user", "user": "User_Shared", "time": now, "text": prompt}
-    all_messages.append(new_msg)
-    
+    new_msg = {
+        "from": my_name,
+        "to": chat_with,
+        "text": prompt,
+        "time": now
+    }
+    db.append(new_msg)
     st.rerun()
 
-# Кнопка обновления (Streamlit не обновляет чат сам, пока кто-то не нажмет кнопку или не напишет)
-if st.button("Обновить чат"):
+if st.sidebar.button("Обновить сообщения"):
     st.rerun()
