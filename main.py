@@ -2,18 +2,6 @@ import streamlit as st
 import sqlite3
 import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
-import streamlit as st
-
-def local_css(file_name):
-    try:
-        with open(file_name, "r", encoding="utf-8") as f:
-            # Исправленный параметр: unsafe_allow_html=True
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.error(f"Файл {file_name} не найден. Проверь, что он создан в Codespaces.")
-
-# Вызывай эту функцию в самом начале
-local_css("style.css")
 
 # Настройка куки (для хранения сессии)
 cookies = EncryptedCookieManager(password="secret_password_123")
